@@ -47,6 +47,18 @@ class UBBParserTester < Test::Unit::TestCase
                
   assert_equal("<iframe src='http://www.mojura.nl' class='myclass1 myclass2'></iframe>",
                UBBParser.parse("[iframe]http://www.mojura.nl[/iframe]", {:class_iframe => "myclass1 myclass2"}))
+
+  assert_equal("<table class=''><tr><td>Test 1</td><td>Test 2</td></tr></table>",
+               UBBParser.parse("[table][tr][td]Test 1[/td][td]Test 2[/td][/tr][/table]"))
+               
+  assert_equal("<table class=''><tr><td>Test 1</td><td>Test 2</td></tr></table>",
+               UBBParser.parse("[table]\n\n[tr]\n[td]Test 1[/td][td]Test 2[/td]\n[/tr]\n\n[/table]"))
+               
+  assert_equal("All html tags like &lt;b&gt;&lt;/b&gt;, &lt;i&gt;&lt;/i&gt; and &lt;script&gt;&lt;/script&gt; should be escaped.",
+               UBBParser.parse("All html tags like <b></b>, <i></i> and <script></script> should be escaped."))
+
+  assert_equal("All html tags like <strong>&lt;i&gt;&lt;/i&gt;</strong>, <strong>&lt;i&gt;&lt;/i&gt;</strong> and <strong>&lt;script&gt;&lt;/script&gt;</strong> should be escaped.",
+               UBBParser.parse("All html tags like [b]<i></i>[/b], [b]<i></i>[/b] and [b]<script></script>[/b] should be escaped."))
                
  end
  

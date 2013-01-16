@@ -1,18 +1,18 @@
 require "strscan"
 require "securerandom"
+require "cgi"
 
 # The UBBParser module converts UBB code into HTML. The parser is flexibel
 # and adding new ubb codes is as easy as writing methods.
-# Author:: Taco Jan Osinga, Osinga Software
 #
 # You can create your own ubbcodes by opening the module UBBParser and adding a method called render_xxx,
 # where xxx is your ubb code of choice. The method should have the following arguments:
-#   (inner_text, attributes = {}, parse_options = {})
-# inner_text::    Contains the text that's found between the opening and the closing tag.
-# attributes::    A hash containing all the key-value attributes that are given.
-# parse_options:: A hash containing the same parse_options that are used when UBBParser.parse() is called.
+#   def render_xxx(inner_text, attributes = {}, parse_options = {})
+# [inner_text]    Contains the text that's found between the opening and the closing tag.
+# [attributes]    A hash containing all the key-value attributes that are given.
+# [parse_options] A hash containing the same parse_options that are used when UBBParser.parse() is called.
 #
-# *Example*
+# ===Example
 # The following example adds the ubb code \[sup\]...\[/sup], which wraps the inner_text with <sup> tags
 #
 #   module UBBParser
@@ -22,7 +22,7 @@ require "securerandom"
 #   end
 #
 # When defining new ubb codes with a method and the name contains a dash, replace the dash by an underscore.
-# I.e. the ubb code for img-left uses the method render_img_left
+# I.e. the ubb code for img-left uses the method render_img_left.
 
 module UBBParser
 
@@ -39,8 +39,10 @@ module UBBParser
 	end
 	
   # Converts a hash into a string with key-values. You can use one of the following options:
-  # options[:allowed_keys]::   An array of keys that are only allowed
-  # options[:denied_keys]::    An array of keys that are denied
+  # [:allowed_keys]   An array of keys that are only allowed
+  # [:denied_keys]    An array of keys that are denied
+  # ===Example:
+  #   UBBParser.hash_to_attrib_str({}, {:allowed_keys => [:class, :src, :width]})
 	def self.hash_to_attrib_str(hash, options = {})
 		hash.delete_if { | k, v | !options[:allowed_keys].include?(k) } if options[:allowed_keys].is_a?(Array)
 		hash.delete_if { | k, v | options[:denied_keys].include?(k) } if options[:denied_keys].is_a?(Array)
@@ -48,10 +50,11 @@ module UBBParser
 	end
 
 	# Parses the given text with ubb code into html. Use parse_options to specify a hash of options:
-	# parse_options\[:convert_newlines\]::    A boolean whether newlines should be convert into <br /> tags (default: true).
-	# parse_options\[:protect_email\]::       A boolean whether email addresses should be protected from spoofing using embedded JavaScript.
-	# parse_options\[:class_xxx\]::           A string with css class(es) that is embedded in the html for the tag xxx. Not all tags supports this.
-	#   Replaces a dash in a tag with underscore (i.e. the class for img-left is defined in :class_img_left).
+	# [:convert_newlines]    A boolean whether newlines should be convert into <br /> tags (default: true).
+	# [:protect_email]       A boolean whether email addresses should be protected from spoofing using embedded JavaScript.
+	# [:class_xxx]           A string with css class(es) that is embedded in the html for the tag xxx. Not all tags supports this.
+	#                        Replace a dash in a tag with underscore (i.e. the class for img-left is defined in :class_img_left).
+	# ===Example:
 	#   {:class_code: "prettify linenums"} => <pre class='prettify linenums'>...</pre>
 	#
 	# When developing your own tags, you can also define your own parse_options.
@@ -60,7 +63,7 @@ module UBBParser
   	scnr = StringScanner.new(text)
   	parse_options.each { | k, v | v.to_s.gsub(/-/, "_").gsub(/[^\w]+/, "") if (k.to_s.start_with?("class_")); v } 
 		while (!scnr.eos?)
-			untagged_text = scnr.scan(/[^\[]*/)
+			untagged_text = CGI.escapeHTML(scnr.scan(/[^\[]*/))
 			
 			# convert newlines to breaks
 			untagged_text.gsub!(/\n/, "<br />") if (!parse_options.include?(:convert_newlines) || parse_options[:convert_newlines])
@@ -187,7 +190,7 @@ module UBBParser
 	end
 	
 	# Renders csv-data into a html table. You can use the following attributes:
-	# has_header:  The first row should be rendered as header cells (using th).
+	# [:has_header]  The first row should be rendered as header cells (using th).
   # :category: Render methods
 	def self.render_csv(inner_text, attributes = {}, parse_options = {})
 		head_cells = body_cells = ""
@@ -366,13 +369,30 @@ module UBBParser
 	end
 	
 	# Converts the [table] to a <table>. Always use this in combination with [tr] and [td] or [th]. Use the :class_table parse option to define html classes.
-	#    [style color: red; border: 1px solid green]...[/style]
   # :category: Render methods
 	def self.render_table(inner_text, attributes = {}, parse_options = {})
-		styles = attributes[:default].gsub(/'/, "\'")
-		"<div style='#{styles}' class='#{parse_options[:class_table].to_s.strip}'>#{self.parse(inner_text, parse_options)}</div>"
+		"<table class='#{parse_options[:class_table].to_s.strip}'>#{self.parse(inner_text.gsub(/(^\n+)|(\n+$)/, ""), parse_options)}</table>"
 	end
-	
+
+	# Converts the [td] to a <td>. Always use this in combination with [table] and [tr].
+  # :category: Render methods
+	def self.render_td(inner_text, attributes = {}, parse_options = {})
+		"<td>#{self.parse(inner_text, parse_options)}</td>"
+	end
+
+	# Converts the [th] to a <th>. Always use this in combination with [table] and [tr].
+  # :category: Render methods
+	def self.render_th(inner_text, attributes = {}, parse_options = {})
+	 
+		"<th>#{self.parse(inner_text, parse_options)}</th>"
+	end
+
+	# Converts the [tr] to a <tr>. Always use this in combination with [table] and [td] or [th].
+  # :category: Render methods
+	def self.render_tr(inner_text, attributes = {}, parse_options = {})
+		"<tr>#{self.parse(inner_text.gsub(/(^\n+)|(\n+$)/, ""), parse_options)}</tr>"
+	end
+
 	# Renders the inner_text underline. Use this with caution, since underline text is associated with hyperlinks.
   # :category: Render methods
 	def self.render_u(inner_text, attributes = {}, parse_options = {})
