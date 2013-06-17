@@ -26,6 +26,13 @@ require "cgi"
 
 module UBBParser
 
+	# Mapping can be used to allow simplified use of files
+	# [img]123123[/img] would have the same effect as [img]files/download/123123[/img]
+	#noinspection RubyClassVariableUsageInspection
+	def self.set_file_url_convert_method(callback_method)
+		@@file_url_convert_method = callback_method
+	end
+
   # Converts a strings containing key-value-list into a hash. This function is mostly used by the parser itself.
   # Attributes are given to the render methods as a hash.
 	def self.attrib_str_to_hash(attrib_str)
@@ -122,8 +129,6 @@ module UBBParser
     return self.matches_regexp?(value, /^(http|https)\:\/\/([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|localhost|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(\/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*$/)
   end
 
-
-
 	# Converts the [anchor=myname]...[/anchor] tag into <a name='myname'>...</a>. Use the :class_anchor parse option to define html classes.
   # :category: Render methods
 	def self.render_anchor(inner_text, attributes = {}, parse_options = {})
@@ -156,7 +161,7 @@ module UBBParser
 		items = inner_text.split(/\n/)
 		items.delete_if { | item | item.strip == "" }
 		items.map! { | item | "<li>" + self.parse(item, parse_options) + "</li>" }
-		return (items.empty?) ? "" : "<ul class='#{parse_options[:class_bullets].to_s.strip}'>" + items.join("") + "</ul>"
+		return (items.empty?) ? "" : "<ul class='#{parse_options[:class_list].to_s.strip}'>" + items.join("") + "</ul>"
 	end
 
 	# Centers the inner_text.
@@ -234,8 +239,14 @@ module UBBParser
     	id = "ubb-email-" + SecureRandom.hex(16)
 
     	# Some generic javascript so every browser can parse this (instantly), regardless of used framework
-    	title = (inner_text == email) ? "protected email address" : inner_text
-			script = "<script type='text/javascript'>obj=document.getElementById(\"#{id}\");email=obj.getAttribute(\"data-username\")+\"@\"+obj.getAttribute(\"data-domain\");obj.href=\"mailto:\"+email;obj.innerHTML=\"#{title}\"</script>";
+    	if (inner_text == email)
+		    title = "Protected email address"
+		    js_title = "email"
+	    else
+				title = inner_text
+				js_title = "\"#{inner_text}\""
+			end
+			script = "<script type='text/javascript'>obj=document.getElementById(\"#{id}\");email=obj.getAttribute(\"data-username\")+\"@\"+obj.getAttribute(\"data-domain\");obj.href=\"mailto:\"+email;obj.innerHTML=#{js_title}</script>";
 			result = "<a id='#{id}' class='#{parse_options[:class_email].to_s.strip}' href='#' data-username='#{username}' data-domain='#{domain}'>#{title}</a>#{script}"
     end
   	return result
@@ -299,10 +310,11 @@ module UBBParser
 
 	# Renders an image. Use the :class_img parse option to define html classes.
   # :category: Render methods
+  #noinspection RubyClassVariableUsageInspection
 	def self.render_img(inner_text, attributes = {}, parse_options = {})
 		url = inner_text
-		url = "" if (!self.is_url?(inner_text))
-		attributes[:src] = inner_text.gsub(/\\|'/) { |c| "\\#{c}" }
+		url = @@file_url_convert_method.call(url) unless @@file_url_convert_method.nil?
+		attributes[:src] = url.gsub(/\\|'/) { |c| "\\#{c}" }
 		attributes[:alt] ||= ""
 		attributes[:class] = parse_options[:class_img] if ((!attributes.has_key?(:skip_class)) || !attributes[:skip_class])
 		attrib_str = self.hash_to_attrib_str(attributes, :allowed_keys => [:src, :alt, :styles, :class])
@@ -345,7 +357,7 @@ module UBBParser
 		items = inner_text.split(/\n/)
 		items.delete_if { | item | item.strip == "" }
 		items.map! { | item | "<li>" + self.parse(item, parse_options) + "</li>" }
-		return (items.empty?) ? "" : "<ul class='#{parse_options[:class_list].to_s.strip}'>" + items.join("") + "</ol>"
+		return (items.empty?) ? "" : "<ol class='#{parse_options[:class_list].to_s.strip}'>" + items.join("") + "</ol>"
 	end
 
 	# Renders the inner_text as a paragraph. Use the :class_p parse option to define html classes.
@@ -407,7 +419,8 @@ module UBBParser
 	def self.render_url(inner_text, attributes = {}, parse_options = {})
   	url = (attributes[:default] || inner_text)
   	url = "http://" + url if (url.match(/^www\./))
-  	url.gsub!(/\\|'/) { |c| "\\#{c}" }
+	  url = @@file_url_convert_method.call(url) unless @@file_url_convert_method.nil?
+	  url.gsub!(/\\|'/) { |c| "\\#{c}" }
   	return "<a href='#{url}' class='#{parse_options[:class_url].to_s.strip}'>#{inner_text}</a>"
 	end
 
