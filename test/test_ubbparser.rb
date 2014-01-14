@@ -7,7 +7,7 @@ require "test/unit"
 class UBBParserTester < Test::Unit::TestCase
 
 	def converting(url)
-		url.gsub!(/(\d+)/, "files\\1")
+		url.gsub(/(\d+)/, "files/\\1")
 	end
 
 	def test_in_array
@@ -46,7 +46,7 @@ class UBBParserTester < Test::Unit::TestCase
 		#assert_equal("<a href='mailto:info@mojura.nl' class=''>info@mojura.nl</a>",
 		#             UBBParser.parse("info@mojura.nl", {:protect_email => true}))
 
-		assert_equal("<a href='files/12345' class=''>files/12345</a>",
+		assert_equal("<a href='files/12345' class=''>12345</a>",
 		             UBBParser.parse("[url]12345[/url]"))
 
 		assert_equal("<a href='files/12345' class=''>Testing</a>",
@@ -75,6 +75,12 @@ class UBBParserTester < Test::Unit::TestCase
 
 		assert_equal("All html tags like <strong>&lt;i&gt;&lt;/i&gt;</strong>, <strong>&lt;i&gt;&lt;/i&gt;</strong> and <strong>&lt;script&gt;&lt;/script&gt;</strong> should be escaped.",
 		             UBBParser.parse("All html tags like [b]<i></i>[/b], [b]<i></i>[/b] and [b]<script></script>[/b] should be escaped."))
+
+		assert_equal("<table class=''><tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>",
+		             UBBParser.parse("[csv]\n1,2\n3,4[/csv]"))
+
+		assert_equal("<table class=''><tbody><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></tbody></table>",
+		             UBBParser.parse("[csv sepchar=;]\n1;2\n3;4[/csv]"))
 
 	end
 

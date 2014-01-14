@@ -199,11 +199,15 @@ module UBBParser
   # :category: Render methods
 	def self.render_csv(inner_text, attributes = {}, parse_options = {})
 		head_cells = body_cells = ""
-		cell_tag = (attributes[:has_header] || true) ? "th" : "td"
-		lines = inner_text.split(/\n/)
-		csv_pattern = /(\"[^\"]*\"|\'[^\']*\'|[^\n\r,]+)[,\n]?/
+		cell_tag = (attributes[:has_header] || false) ? "th" : "td"
+		lines = inner_text.gsub(/(^\n|\n*$)/, '').split(/\n/)
+		sep_char = (attributes[:sepchar] || ',')
+		csv_pattern = /(\"[^\"]*\"|\'[^\']*\'|[^\n\r#{sep_char}]+)[#{sep_char}\n]?/
 		lines.each { | line |
-			cells = attrib_str.scan(csv_pattern) { | item | "<#{cell_tag}>#{item}</#{cell_tag}>" }
+			cells = ""
+			line.scan(csv_pattern) { | item |
+				cells += "<#{cell_tag}>#{item[0]}</#{cell_tag}>"
+			}
 			cells = "<tr>#{cells}</tr>"
 			if (cell_tag == "th")
 				head_cells += cells
@@ -215,9 +219,9 @@ module UBBParser
 		result = ""
 		if (!head_cells.empty? || !body_cells.empty?)
 			result = "<table class='#{parse_options[:class_csv].to_s.strip}'>"
-			result += "<thead>#{head_cells}</thead>" if (!head_cells.empty?)
+			result += "<thead>#{head_cells}</thead>" unless head_cells.empty?
 			result += "<tbody>#{body_cells}</tbody>"
-			result = "</table>"
+			result += "</table>"
 		end
 		return result
 	end
@@ -420,7 +424,7 @@ module UBBParser
   	url = (attributes[:default] || inner_text)
   	url = "http://" + url if (url.match(/^www\./))
 	  url = @@file_url_convert_method.call(url) unless @@file_url_convert_method.nil?
-	  url.gsub!(/\\|'/) { |c| "\\#{c}" }
+	  url.to_s.gsub!(/\\|'/) { |c| "\\#{c}" }
   	return "<a href='#{url}' class='#{parse_options[:class_url].to_s.strip}'>#{inner_text}</a>"
 	end
 
