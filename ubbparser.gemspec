@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        						= 'ubbparser'
-  s.version     						= '0.1.2'
-  s.date        						= '2014-01-14'
+  s.version     						= '0.1.8'
+  s.date        						= '2014-02-19'
   s.summary     						= 'UBB Parser'
   s.description 						= 'A simple and flexibel ubb parser.'
   s.authors     						= ['Taco Jan Osinga']
