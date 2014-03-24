@@ -70,6 +70,7 @@ module UBBParser
 	# Parses the given text with ubb code into html. Use parse_options to specify a hash of options:
 	# [:convert_newlines]    A boolean whether newlines should be convert into <br /> tags (default: true).
 	# [:protect_email]       A boolean whether email addresses should be protected from spoofing using embedded JavaScript.
+	# [:strip_ubb]           A boolean whether the parse should return all data without html. Default: false.
 	# [:class_xxx]           A string with css class(es) that is embedded in the html for the tag xxx. Not all tags supports this.
 	#                        Replace a dash in a tag with underscore (i.e. the class for img-left is defined in :class_img_left).
 	# ===Example:
@@ -77,6 +78,7 @@ module UBBParser
 	#
 	# When developing your own tags, you can also define your own parse_options.
 	def parse(text, parse_options = {})
+		parse_options[:strip_ubb] ||= false
 		result = ''
 		scnr = StringScanner.new(text)
 		parse_options.each { |k, v| v.to_s.gsub(/-/, '_').gsub(/[^\w]+/, '') if (k.to_s.start_with?('class_')); v }
@@ -123,6 +125,11 @@ module UBBParser
 		return result
 	end
 
+	def strip_ubb(text, parse_options = {})
+		parse_options[:strip_ubb] = true
+		return parse(text, parse_options)
+	end
+
 	# Returns true if the given value matches the given regular expression.
 	# :category: Validation methods
 	def matches_regexp?(value, regexp)
@@ -160,18 +167,21 @@ module UBBParser
 	# Renders the inner_text bold (using <strong>).
 	# :category: Render methods
 	def render_b(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<strong>#{parse(inner_text, parse_options)}</strong>"
 	end
 
 	# Converts [br] into a <br />.
 	# :category: Render methods
 	def render_br(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<br />#{parse(inner_text, parse_options)}"
 	end
 
 	# Converts all lines in the inner_text as a bullet list. Each line represents one list item. Empty lines are ignored. Use the :class_bullet parse option to define html classes.
 	# :category: Render methods
 	def render_bullets(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		items = inner_text.split(/\n/)
 		items.delete_if { |item| item.strip == '' }
 		items.map! { |item| '<li>' + parse(item, parse_options) + '</li>' }
@@ -182,12 +192,14 @@ module UBBParser
 	# Centers the inner_text.
 	# :category: Render methods
 	def render_center(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<div style='text-align: center'>#{parse(inner_text, parse_options)}</div>"
 	end
 
 	# Assures the inner_text is rendered below floating elements.
 	# :category: Render methods
 	def render_class(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		classes = attributes[:class_attrib_str].to_s.gsub(/'/, "\\'")
 		"<div class='#{classes}'>#{parse(inner_text, parse_options)}</div>"
 	end
@@ -195,12 +207,14 @@ module UBBParser
 	# Assures the inner_text is rendered below floating elements.
 	# :category: Render methods
 	def render_clear(inner_text, attributes = {}, parse_options = {})
+		return "" if parse_options[:strip_ubb]
 		"<div style='clear: both'></div>"
 	end
 
 	# Changes the font color of the inner_text
 	# :category: Render methods
 	def render_color(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		color = attributes[:default].gsub(/'/, "\\'")
 		"<div style='color:#{color}'>#{parse(inner_text, parse_options)}</div>"
 	end
@@ -214,6 +228,7 @@ module UBBParser
 	# Places the inner_text in a fixed font type. Also adds the classes prettify and linenums for styling purposes. Use the :class_code parse option to define html classes.
 	# :category: Render methods
 	def render_code(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		css_class = parse_options[:class_code] || 'ubb-code'
 		"<pre class='#{css_class}'>#{inner_text}</pre>"
 	end
@@ -222,6 +237,7 @@ module UBBParser
 	# [:has_header]  The first row should be rendered as header cells (using th).
 	# :category: Render methods
 	def render_csv(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		head_cells = body_cells = ''
 		cell_tag = (attributes[:has_header]) ? 'th' : 'td'
 		lines = inner_text.gsub(/(^\n|\n*$)/, '').split(/\n/)
@@ -257,6 +273,7 @@ module UBBParser
 	# By default the email address is protected against spoofing, using JavaScript. Use the email parse option to define html classes.
 	# :category: Render methods
 	def render_email(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		css_class = (parse_options[:class_email] || 'ubb-email').to_s.strip
 		inner_text = parse(inner_text, parse_options) if !attributes[:default].nil?
   	email = (attributes[:default] || inner_text)
@@ -285,54 +302,63 @@ module UBBParser
 	# Renders the inner_text in a H1 heading.
 	# :category: Render methods
 	def render_h1(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h1>#{parse(inner_text, parse_options)}</h1>"
 	end
 
 	# Renders the inner_text in a H2 heading.
 	# :category: Render methods
 	def render_h2(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h2>#{parse(inner_text, parse_options)}</h2>"
 	end
 
 	# Renders the inner_text in a H3 heading.
 	# :category: Render methods
 	def render_h3(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h3>#{parse(inner_text, parse_options)}</h3>"
 	end
 
 	# Renders the inner_text in a H4 heading.
 	# :category: Render methods
 	def render_h4(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h4>#{parse(inner_text, parse_options)}</h4>"
 	end
 
 	# Renders the inner_text in a H5 heading.
 	# :category: Render methods
 	def render_h5(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h5>#{parse(inner_text, parse_options)}</h5>"
 	end
 
 	# Renders the inner_text in a H6 heading.
 	# :category: Render methods
 	def render_h6(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<h6>#{parse(inner_text, parse_options)}</h6>"
 	end
 
 	# Renders a horizontal ruler.
 	# :category: Render methods
 	def render_hr(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<hr />#{parse(inner_text, parse_options)}"
 	end
 
 	# Renders the inner_text in italic.
 	# :category: Render methods
 	def render_i(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<em>#{parse(inner_text, parse_options)}</em>"
 	end
 
 	# Renders an iframe. Use the inner_text as source. Use the :class_iframe parse option to define html classes.
 	# :category: Render methods
 	def render_iframe(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		src = inner_text
 		src = 'http://' + src if (src.match(/^www\./))
 		src.gsub!(/\\|'/) { |c| "\\#{c}" }
@@ -352,6 +378,7 @@ module UBBParser
 	# :category: Render methods
 	#noinspection RubyClassVariableUsageInspection
 	def render_img(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		url = inner_text
 		url = @@file_url_convert_method.call(url) unless @@file_url_convert_method.nil?
 		attributes[:src] = url.gsub(/\\|'/) { |c| "\\#{c}" }
@@ -365,6 +392,7 @@ module UBBParser
 	# Renders an image, floated on the left side of the text frame. Use the :class_img_left parse option to define html classes.
 	# :category: Render methods
 	def render_img_left(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		attributes[:styles] = 'float: left; margin: 0px 10px 10px 0px'
 		attributes[:class] = parse_options[:class_img_left] || 'ubb-img-left'
 		render_img(inner_text, attributes, parse_options)
@@ -373,6 +401,7 @@ module UBBParser
 	# Renders an image, floated on the right side of the text frame. Use the :class_img_right parse option to define html classes.
 	# :category: Render methods
 	def render_img_right(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		attributes[:styles] = 'float: left; margin: 0px 0px 10px 10px'
 		attributes[:class] = parse_options[:class_img_right] || 'ubb-img-right'
 		render_img(inner_text, attributes, parse_options)
@@ -381,18 +410,21 @@ module UBBParser
 	# Renders the inner_text with a justified text alignment.
 	# :category: Render methods
 	def render_justify(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<div style='text-align: justify'>#{parse(inner_text, parse_options)}</div>"
 	end
 
 	# Renders the inner_text with a left text alignment.
 	# :category: Render methods
 	def render_left(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<div style='text-align: left'>#{parse(inner_text, parse_options)}</div>"
 	end
 
 	# Renders the inner_text as an ordered list. Each line represents a list item. Use the :class_list parse option to define html classes.
 	# :category: Render methods
 	def render_list(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		items = inner_text.split(/\n/)
 		items.delete_if { |item| item.strip == '' }
 		items.map! { |item| '<li>' + parse(item, parse_options) + '</li>' }
@@ -402,6 +434,7 @@ module UBBParser
 	# Renders the inner_text as a paragraph. Use the :class_p parse option to define html classes.
 	# :category: Render methods
 	def render_p(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		css_class = parse_options[:class_p] || 'ubb-p'
 		"<p class='#{css_class}'>#{parse(inner_text, parse_options)}</p>"
 	end
@@ -409,6 +442,7 @@ module UBBParser
 	# Renders the inner_text with a right text alignment.
 	# :category: Render methods
 	def render_right(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<div style='text-align: right'>#{parse(inner_text, parse_options)}</div>"
 	end
 
@@ -416,6 +450,7 @@ module UBBParser
 	#    [style color: red; border: 1px solid green]...[/style]
 	# :category: Render methods
 	def render_style(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		styles = attributes[:class_attrib_str].to_s.gsub(/'/, "\\'")
 		"<div style='#{styles}'>#{parse(inner_text, parse_options)}</div>"
 	end
@@ -423,6 +458,7 @@ module UBBParser
 	# Converts the [table] to a <table>. Always use this in combination with [tr] and [td] or [th]. Use the :class_table parse option to define html classes.
 	# :category: Render methods
 	def render_table(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		css_class = parse_options[:class_table] || 'ubb-table'
 		"<table class='#{css_class}'>#{parse(inner_text.gsub(/(^\n+)|(\n+$)/, ''), parse_options)}</table>"
 	end
@@ -430,18 +466,21 @@ module UBBParser
 	# Converts the [td] to a <td>. Always use this in combination with [table] and [tr].
 	# :category: Render methods
 	def render_td(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<td>#{parse(inner_text, parse_options)}</td>"
 	end
 
 	# Converts the [th] to a <th>. Always use this in combination with [table] and [tr].
 	# :category: Render methods
 	def render_th(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<th>#{parse(inner_text, parse_options)}</th>"
 	end
 
 	# Converts the [tr] to a <tr>. Always use this in combination with [table] and [td] or [th].
 	# :category: Render methods
 	def render_tr(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		"<tr>#{parse(inner_text.gsub(/(^\n+)|(\n+$)/, ''), parse_options)}</tr>"
 	end
 
@@ -458,6 +497,7 @@ module UBBParser
 	# :category: Render methods
 	#noinspection RubyClassVariableUsageInspection
 	def render_url(inner_text, attributes = {}, parse_options = {})
+		return parse(inner_text, parse_options) if parse_options[:strip_ubb]
 		inner_text = parse(inner_text, parse_options) if !attributes[:default].nil?
 		url = (attributes[:default] || inner_text)
 		url = 'http://' + url if (url.start_with?('www.'))
@@ -471,6 +511,7 @@ module UBBParser
 	# Renders a YouTube video using the video id or url in the inner_text.
 	# :category: Render methods
 	def render_vimeo(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		attributes[:width] ||= 500
 		attributes[:height] ||= 281
 		attributes[:class] = parse_options[:class_vimeo] || 'ubb-vimeo'
@@ -482,6 +523,7 @@ module UBBParser
 	# Renders a YouTube video using the video id or url in the inner_text.
 	# :category: Render methods
 	def render_youtube(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		attributes[:width] ||= 560
 		attributes[:height] ||= 315
 		attributes[:class] = parse_options[:class_youtube] || 'ubb-youtube'
@@ -510,6 +552,7 @@ module UBBParser
 	# Renders a zideo.nl video using the video id or url in the inner_text.
 	# :category: Render methods
 	def render_zideo(inner_text, attributes = {}, parse_options = {})
+		return inner_text if parse_options[:strip_ubb]
 		attributes[:width] ||= 480
 		attributes[:height] ||= :auto
 		attributes[:class] = parse_options[:class_zideo] || 'ubb-zideo'

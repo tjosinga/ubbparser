@@ -10,7 +10,7 @@ class UBBParserTester < Test::Unit::TestCase
 		url.gsub(/(\d+)/, "files/\\1")
 	end
 
-	def test_in_array
+	def test_parse
 		UBBParser.set_file_url_convert_method(method(:converting))
 
 		assert_equal('This is a <strong>test</strong>',
@@ -100,6 +100,13 @@ class UBBParserTester < Test::Unit::TestCase
 		assert_equal("<h1>Test</h1>Test", UBBParser.parse("[h1]Test[/h1]\nTest"))
 		assert_equal("<strong>Test</strong><br />Test", UBBParser.parse("[b]Test[/b]\nTest"))
 
+		assert_equal("<a href='http://www.mojura.nl' class='ubb-url' target='_blank'>http://www.mojura.nl</a> is an example",
+		             UBBParser.parse('http://www.mojura.nl is an example'))
+	end
+
+	def test_strip_tags
+		assert_equal('This is a test',
+		             UBBParser.strip_ubb('This is a [b][i]test[/i][/b]'))
 	end
 
 end
